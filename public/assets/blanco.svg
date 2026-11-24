@@ -5,9 +5,7 @@
       <stop offset="1" stop-color="#eef2f8"/>
     </linearGradient>
   </defs>
-  <rect x="38" y="22" width="124" height="156" rx="10" fill="url(#g)" stroke="#8a97ab" stroke-width="5"/>
-  <rect x="62" y="48" width="76" height="62" rx="6" fill="none" stroke="#b7c1d0" stroke-width="4" stroke-dasharray="9 7"/>
-  <rect x="58" y="128" width="84" height="7" rx="3.5" fill="#c9d1dd"/>
-  <rect x="70" y="145" width="60" height="7" rx="3.5" fill="#c9d1dd"/>
-  <text x="100" y="196" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="20" font-weight="700" fill="#5b6b85" letter-spacing="1">EN BLANCO</text>
+  <rect x="6" y="6" width="188" height="188" rx="14" fill="url(#g)" stroke="#8a97ab" stroke-width="6"/>
+  <rect x="44" y="34" width="112" height="92" rx="8" fill="none" stroke="#b7c1d0" stroke-width="5" stroke-dasharray="11 8"/>
+  <text x="100" y="168" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="24" font-weight="700" fill="#5b6b85" letter-spacing="1.5">EN BLANCO</text>
 </svg>

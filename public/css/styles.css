@@ -145,7 +145,7 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 .is-locked .option-box:not(.is-chosen) { opacity: 0.55; filter: grayscale(0.4); transition: opacity 0.3s; }
 .option-box.is-chosen { transform: none; border-color: var(--linea); box-shadow: none; }
 .option-box.is-chosen img { animation: none; filter: none; transform: none; }
-.option-box.is-blank { background: #fbfcfe; padding: 14%; }
+.option-box.is-blank { background: #fbfcfe; }
 .xmark { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .xmark path {
   fill: none; stroke: #1d2230; stroke-width: 4.2; stroke-linecap: round; opacity: 0.92;

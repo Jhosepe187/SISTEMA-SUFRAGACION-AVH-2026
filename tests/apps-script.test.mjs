@@ -42,8 +42,9 @@ function makeCache() {
   return { get: (k) => (m.has(k) ? m.get(k) : null), put: (k, v) => m.set(k, String(v)), remove: (k) => m.delete(k) };
 }
 
-function load() {
+function load({ runSetup = true } = {}) {
   const books = {};
+  const opens = { n: 0 };
   const events = [];
   const clock = { t: 1_800_000_000_000 };
   class FakeDate extends Date { static now() { return clock.t; } }
@@ -51,7 +52,7 @@ function load() {
   const cache = makeCache();
   let n = 0;
   const ctx = {
-    SpreadsheetApp: { openById: (id) => (books[id] ||= makeSpreadsheet()), flush: () => events.push('flush') },
+    SpreadsheetApp: { openById: (id) => { opens.n++; return (books[id] ||= makeSpreadsheet()); }, flush: () => events.push('flush') },
     CacheService: { getScriptCache: () => cache },
     PropertiesService: {
       getScriptProperties: () => ({
@@ -74,9 +75,9 @@ function load() {
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), ctx);
-  ctx.setup();
+  if (runSetup) ctx.setup();
   const post = (body) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).content);
-  return { ctx, books, post, events, clock };
+  return { ctx, books, post, events, clock, opens };
 }
 
 const BD = '1OXnQwi6F4ywY156jGIaxQ8bwGCPmR2G1WbdiCAbvEAQ';
@@ -220,4 +221,41 @@ test('login tolera espacios y mayúsculas en el usuario', () => {
   const { post, ctx } = load();
   ctx.PropertiesService.getScriptProperties().setProperty('ADMIN_PASS', ' clave-prueba \n');
   assert.equal(post({ action: 'login', user: ' AdminAVH ', pass: 'clave-prueba ' }).ok, true);
+});
+
+test('crea las hojas solas si nadie ejecutó setup', () => {
+  const { post, books } = load({ runSetup: false });
+  const { token } = login(post);
+  const r = post({ action: 'vote', token, lista: 'UNESI', vote_id: 's1', estacion: 'Mesa 1' });
+  assert.equal(r.ok, true);
+  assert.equal(r.counts.UNESI, 1);
+  assert.equal(books[BD].sheets.Votos.rows.length, 2);
+  assert.ok(books[REP].sheets.Resumen);
+  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 1, HUMBI: 0, AVH: 0 });
+});
+
+test('results sin hojas creadas devuelve ceros (no error)', () => {
+  const { post } = load({ runSetup: false });
+  const { token } = login(post);
+  const r = post({ action: 'results', token });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 0 });
+});
+
+test('results repetidos usan caché sin abrir la hoja', () => {
+  const { post, opens } = load();
+  const { token } = login(post);
+  post({ action: 'vote', token, lista: 'AVH', vote_id: 'k1', estacion: 'Mesa 1' });
+  opens.n = 0;
+  const r = post({ action: 'results', token });
+  assert.equal(r.counts.AVH, 1);
+  assert.equal(opens.n, 0);
+});
+
+test('un voto abre cada libro una sola vez', () => {
+  const { post, opens } = load();
+  const { token } = login(post);
+  opens.n = 0;
+  post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'o1', estacion: 'Mesa 1' });
+  assert.ok(opens.n <= 2, 'openById llamado ' + opens.n + ' veces');
 });

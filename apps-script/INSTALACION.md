@@ -19,7 +19,9 @@ Se hace **una sola vez**, con la cuenta de Google dueña de las dos hojas (BD si
 
 > Para cambiar la contraseña en el futuro, solo cambia `ADMIN_PASS` aquí. No hay que tocar el sitio.
 
-## 3. Preparar las hojas
+## 3. Preparar las hojas (opcional)
+
+> La API crea sola las pestañas `Votos`, `Conteo` y `Resumen` en la primera petición. Ejecutar `setup` sirve sobre todo para **autorizar** el script la primera vez.
 
 1. Vuelve al editor (`<>` en la barra izquierda).
 2. En la lista de funciones de arriba elige **`setup`** y pulsa **Ejecutar**.

@@ -1,5 +1,5 @@
 // Pantalla de resultados: barras por lista, gráfico global y total, con refresco periódico.
-import { LISTAS, POLL_MS } from './config.js';
+import { LISTAS, POLL_MS, KEY_PREFIX } from './config.js';
 import { computeShares } from './logic.js';
 
 export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
@@ -76,41 +76,75 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
     root.querySelectorAll('[data-key]').forEach((el) => el.classList.toggle('is-lead', total > 0 && el.dataset.key === lead.key && items.filter((i) => i.votos === lead.votos).length === 1));
   }
 
+  const SNAP_KEY = KEY_PREFIX + 'last_counts';
+  const STALE_S = Math.max(15, (POLL_MS / 1000) * 4);
+  let lastError = '';
+  let running = false;
+
   function updatedLabel() {
     const el = $('[data-updated]');
-    if (!lastOk) return;
+    if (!lastOk) {
+      el.textContent = lastError ? `⚠ ${lastError} · reintentando…` : 'Cargando…';
+      el.classList.toggle('is-stale', !!lastError);
+      return;
+    }
     const s = Math.round((Date.now() - lastOk) / 1000);
-    const stale = s > (POLL_MS / 1000) * 3;
-    el.textContent = stale ? `⚠ Sin conexión · último dato hace ${s}s` : `● Actualizado hace ${s}s`;
+    const stale = s > STALE_S;
+    el.textContent = stale ? `⚠ ${lastError || 'Sin conexión'} · último dato hace ${s}s` : `● Actualizado hace ${s}s`;
     el.classList.toggle('is-stale', stale);
   }
 
+  function schedule() {
+    clearTimeout(timer);
+    if (running && !document.hidden) timer = setTimeout(poll, POLL_MS);
+  }
+
   async function poll() {
+    if (!running) return;
     try {
       const r = await fetchCounts();
       if (r.ok) {
         lastOk = Date.now();
+        lastError = '';
         render(r.counts);
+        try { localStorage.setItem(SNAP_KEY, JSON.stringify(r.counts)); } catch { /* sin almacenamiento */ }
       } else if (r.error === 'auth') {
         stop();
         onAuthError?.();
         return;
+      } else {
+        lastError = 'Error del servidor';
       }
     } catch {
-      /* se mantiene el último dato */
+      lastError = 'Sin conexión';
     }
     updatedLabel();
-    timer = setTimeout(poll, POLL_MS);
+    schedule();
+  }
+
+  function onVisibility() {
+    if (!running) return;
+    if (document.hidden) clearTimeout(timer);
+    else poll();
   }
 
   function start() {
     stop();
+    running = true;
+    // mostrar al instante el último conteo conocido mientras llega el nuevo
+    try {
+      const snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+      if (snap) render(snap);
+    } catch { /* */ }
+    document.addEventListener('visibilitychange', onVisibility);
     poll();
     tick = setInterval(updatedLabel, 1000);
   }
   function stop() {
+    running = false;
     clearTimeout(timer);
     clearInterval(tick);
+    document.removeEventListener('visibilitychange', onVisibility);
   }
 
   return { start, stop };

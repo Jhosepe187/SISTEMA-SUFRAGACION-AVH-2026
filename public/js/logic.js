@@ -1,7 +1,6 @@
 // Lógica pura: porcentajes y cola local de votos (sin DOM).
 
 const KEYS = ['UNESI', 'HUMBI', 'AVH'];
-const QUEUE_KEY = 'avh_queue';
 
 export function computeShares(counts) {
   const items = KEYS.map((key) => ({ key, votos: Number(counts?.[key]) || 0 }));
@@ -18,15 +17,16 @@ function uuid() {
 // Cola persistente: un voto sale de la cola solo cuando el servidor lo confirma.
 // El servidor deduplica por vote_id, así que reintentar nunca duplica.
 export class VoteQueue {
-  constructor(storage, sendFn) {
+  constructor(storage, sendFn, key = 'avh_queue') {
     this.storage = storage;
     this.sendFn = sendFn;
+    this.key = key;
     this._flushing = null;
   }
 
   _read() {
     try {
-      const raw = this.storage.getItem(QUEUE_KEY);
+      const raw = this.storage.getItem(this.key);
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
     } catch {
@@ -35,7 +35,7 @@ export class VoteQueue {
   }
 
   _write(arr) {
-    this.storage.setItem(QUEUE_KEY, JSON.stringify(arr));
+    this.storage.setItem(this.key, JSON.stringify(arr));
   }
 
   enqueue(lista, estacion) {
@@ -78,8 +78,9 @@ export class VoteQueue {
       } else if (res && res.error === 'auth') {
         authError = true;
         break;
-      } else if (res && res.error === 'lista') {
-        // voto inválido: no se puede reintentar nunca; se descarta para no bloquear la cola
+      } else if (res && (res.error === 'lista' || res.error === 'vote_id' || res.error === 'eleccion')) {
+        // voto que el servidor nunca aceptará (inválido o de antes del reinicio de la elección):
+        // se descarta para no bloquear la cola
         this._write(this._read().filter((v) => v.vote_id !== vote.vote_id));
         failed++;
       } else {

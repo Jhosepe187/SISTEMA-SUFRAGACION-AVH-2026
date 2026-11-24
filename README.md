@@ -59,7 +59,9 @@ Cada vez que cambies `config.js` u otro archivo, vuelve a desplegar.
 1. En Apps Script, ejecuta `reiniciarEleccion` para borrar los votos de prueba (ver la guía).
 2. En cada PC: abre el sitio → inicia sesión → elige **Mesa 1** o **Mesa 2** → *Iniciar votación*. Conviene poner el navegador en pantalla completa (F11).
 3. Los resultados se pueden ver desde cualquier dispositivo iniciando sesión → *Ver resultados*.
-4. Si se va el internet, la mesa sigue votando: abajo a la derecha aparece "N votos por sincronizar" y se envían solos al volver la conexión. **No borres los datos del navegador mientras haya votos pendientes.**
+4. Si se va el internet, la mesa sigue votando: abajo a la derecha (y en el menú) aparece "N votos por sincronizar" y los votos se envían solos al volver la conexión. **No borres los datos del navegador mientras haya votos pendientes.**
+5. **No uses ventanas de incógnito o privadas** en las mesas: ahí el navegador puede no guardar la cola de votos pendientes.
+6. Antes de anunciar los resultados, revisa que las dos mesas muestren "● Conectado" (0 votos por sincronizar).
 
 ## Pruebas
 

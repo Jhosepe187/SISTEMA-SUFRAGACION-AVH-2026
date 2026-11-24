@@ -80,3 +80,31 @@ test('mock login + vote + results', async () => {
   assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 1 });
   assert.equal((await api.results('otro')).error, 'auth');
 });
+
+test('eleccion descarta el voto viejo', async () => {
+  const q = new VoteQueue(fakeStorage(), async () => ({ ok: false, error: 'eleccion' }));
+  q.enqueue('UNESI', 'Mesa 1');
+  await q.flush();
+  assert.equal(q.pending(), 0);
+});
+
+test('VoteQueue con clave propia no toca la cola real', () => {
+  const s = fakeStorage();
+  new VoteQueue(s, async () => ({ ok: true }), 'avh_mock_queue').enqueue('UNESI', 'Mesa 1');
+  assert.equal(s.getItem('avh_queue'), null);
+});
+
+test('fetch colgado se aborta por timeout', async () => {
+  const { createApi } = await import('../public/js/api.js');
+  const hang = (_u, o) => new Promise((_, rej) => o.signal.addEventListener('abort', () => rej(new Error('abort'))));
+  const api = createApi({ url: 'https://x', mock: false, timeoutMs: 30, fetchImpl: hang });
+  await assert.rejects(api.vote('t', { vote_id: 'a', lista: 'UNESI', estacion: 'Mesa 1', ts: 1 }));
+});
+
+test('vote envía ts al servidor', async () => {
+  const { createApi } = await import('../public/js/api.js');
+  let body;
+  const api = createApi({ url: 'https://x', mock: false, fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true, json: async () => ({ ok: true }) }; } });
+  await api.vote('t', { vote_id: 'a', lista: 'UNESI', estacion: 'Mesa 1', ts: 123 });
+  assert.equal(body.ts, 123);
+});

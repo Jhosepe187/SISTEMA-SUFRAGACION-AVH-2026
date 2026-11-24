@@ -1,24 +1,32 @@
 // Cliente de la API (Apps Script) y simulador local para pruebas.
 
-export function createApi({ url, mock, latency = 300 }) {
-  return mock ? mockApi(latency) : realApi(url);
+export function createApi({ url, mock, latency = 300, timeoutMs = 25000, fetchImpl }) {
+  return mock ? mockApi(latency) : realApi(url, timeoutMs, fetchImpl || ((...a) => fetch(...a)));
 }
 
-function realApi(url) {
+function realApi(url, timeoutMs, fetchImpl) {
   async function call(body) {
-    // text/plain evita el "preflight" CORS que Apps Script no responde.
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body),
-      redirect: 'follow',
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+    // Si la red se cuelga, se aborta para que la cola reintente (el servidor deduplica).
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      // text/plain evita el "preflight" CORS que Apps Script no responde.
+      const res = await fetchImpl(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body),
+        redirect: 'follow',
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
   }
   return {
     login: (user, pass) => call({ action: 'login', user, pass }),
-    vote: (token, v) => call({ action: 'vote', token, lista: v.lista, vote_id: v.vote_id, estacion: v.estacion }),
+    vote: (token, v) => call({ action: 'vote', token, lista: v.lista, vote_id: v.vote_id, estacion: v.estacion, ts: v.ts }),
     results: (token) => call({ action: 'results', token }),
   };
 }

@@ -50,16 +50,20 @@ Prueba rápida: si abres la URL `/exec` en el navegador, debe responder `{"ok":t
 
 ## Reiniciar la elección (antes del día de votación)
 
-Para borrar los votos de prueba: en Apps Script elige la función **`reiniciarEleccion`** → **Ejecutar**. Borra todas las filas de `Votos`, pone `Conteo` en 0 y actualiza el REPORTE. **No se puede deshacer.**
+Para borrar los votos de prueba: en Apps Script elige la función **`reiniciarEleccion`** → **Ejecutar**. **No se puede deshacer.** Hace lo siguiente:
 
-Además, en cada PC de votación, abre el sitio y vuelve a iniciar sesión.
+- borra todas las filas de `Votos` y deja el conteo y el REPORTE en 0;
+- **cierra la sesión de todas las PCs**: cada mesa debe volver a iniciar sesión;
+- descarta los votos de ensayo que alguna PC todavía tenga "por sincronizar", para que no se sumen a la elección real.
+
+Si alguien editó `Conteo` o el REPORTE a mano, ejecuta **`recontar`**: los reconstruye a partir de la hoja `Votos`.
 
 ## Qué guarda cada hoja
 
 | Hoja | Pestaña | Contenido |
 |---|---|---|
 | BD simple | `Votos` | Una fila por voto: Fecha, Mesa, Lista, ID (único, evita duplicados) |
-| BD simple | `Conteo` | Total por lista (lo usa el sitio para los resultados) |
+| BD simple | `Conteo` | Total por lista (vista; se recalcula desde `Votos` en cada voto) |
 | REPORTE | `Resumen` | Lista, Votos, %, Total y hora de la última actualización |
 
-No edites `Conteo` a mano durante la votación.
+La hoja **`Votos` es la fuente de verdad**: los resultados del sitio se cuentan directamente desde ella. No borres ni edites filas de `Votos` durante la votación.

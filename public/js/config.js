@@ -14,5 +14,7 @@ export const THANKS_MS = 8000; // pantalla "Gracias por votar"
 export const POLL_MS = 3000; // refresco de resultados
 export const RETRY_MS = 5000; // reintento de votos pendientes
 
-const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
-export const MOCK = API_URL === '' || params.get('mock') === '1';
+// Modo prueba solo mientras no haya URL de Google: así nunca se mezclan votos reales con simulados.
+export const MOCK = API_URL === '';
+// Claves de almacenamiento separadas para el modo prueba.
+export const KEY_PREFIX = MOCK ? 'avh_mock_' : 'avh_';

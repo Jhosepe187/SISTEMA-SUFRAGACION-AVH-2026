@@ -13,6 +13,7 @@ function makeSheet(name) {
     getLastRow: () => rows.length,
     appendRow: (r) => { rows.push([...r]); },
     clear: () => { rows.length = 0; },
+    deleteRows: (r, n) => { rows.splice(r - 1, n); },
     getRange: (r, c, nr = 1, nc = 1) => ({
       getValues: () => Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => rows[r - 1 + i]?.[c - 1 + j] ?? '')),
       setValues: (vals) => vals.forEach((row, i) => row.forEach((v, j) => {
@@ -43,11 +44,14 @@ function makeCache() {
 
 function load() {
   const books = {};
+  const events = [];
+  const clock = { t: 1_800_000_000_000 };
+  class FakeDate extends Date { static now() { return clock.t; } }
   const props = new Map([['ADMIN_USER', 'adminAVH'], ['ADMIN_PASS', 'clave-prueba']]);
   const cache = makeCache();
   let n = 0;
   const ctx = {
-    SpreadsheetApp: { openById: (id) => (books[id] ||= makeSpreadsheet()) },
+    SpreadsheetApp: { openById: (id) => (books[id] ||= makeSpreadsheet()), flush: () => events.push('flush') },
     CacheService: { getScriptCache: () => cache },
     PropertiesService: {
       getScriptProperties: () => ({
@@ -57,13 +61,14 @@ function load() {
         getKeys: () => [...props.keys()],
       }),
     },
-    LockService: { getScriptLock: () => ({ waitLock: () => {}, releaseLock: () => {} }) },
+    LockService: { getScriptLock: () => ({ waitLock: () => events.push('lock'), releaseLock: () => events.push('release') }) },
     Utilities: { getUuid: () => 'uuid-' + ++n },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (s) => ({ content: s, setMimeType() { return this; } }),
     },
-    Date,
+    Date: FakeDate,
+    console,
     JSON,
     Math,
   };
@@ -71,7 +76,7 @@ function load() {
   vm.runInContext(fs.readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), ctx);
   ctx.setup();
   const post = (body) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).content);
-  return { ctx, books, post };
+  return { ctx, books, post, events, clock };
 }
 
 const BD = '1OXnQwi6F4ywY156jGIaxQ8bwGCPmR2G1WbdiCAbvEAQ';
@@ -151,4 +156,56 @@ test('results devuelve counts', () => {
 test('results sin token → auth', () => {
   const { post } = load();
   assert.equal(post({ action: 'results', token: '' }).error, 'auth');
+});
+
+const login = (post) => post({ action: 'login', user: 'adminAVH', pass: 'clave-prueba' });
+
+test('conteo se deriva de Votos aunque Conteo esté desfasado', () => {
+  const { post, books } = load();
+  const { token } = login(post);
+  books[BD].sheets.Conteo.getRange(2, 1, 3, 2).setValues([['UNESI', 50], ['HUMBI', 50], ['AVH', 50]]);
+  const r = post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'c1', estacion: 'Mesa 1' });
+  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 1, AVH: 0 });
+  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 0, HUMBI: 1, AVH: 0 });
+});
+
+test('flush antes de liberar el lock', () => {
+  const { post, events } = load();
+  const { token } = login(post);
+  events.length = 0;
+  post({ action: 'vote', token, lista: 'UNESI', vote_id: 'f1', estacion: 'Mesa 1' });
+  const i = events.lastIndexOf('release');
+  assert.ok(i > 0 && events[i - 1] === 'flush', JSON.stringify(events));
+});
+
+test('reporte que falla no rompe el voto', () => {
+  const { post, books } = load();
+  const { token } = login(post);
+  delete books[REP].sheets.Resumen;
+  const r = post({ action: 'vote', token, lista: 'AVH', vote_id: 'rf1', estacion: 'Mesa 2' });
+  assert.equal(r.ok, true);
+  assert.equal(r.counts.AVH, 1);
+});
+
+test('reiniciar invalida sesiones viejas y votos anteriores al reinicio', () => {
+  const { post, ctx, clock } = load();
+  const old = login(post).token;
+  const tsBefore = clock.t;
+  clock.t += 1000;
+  ctx.reiniciarEleccion();
+  clock.t += 1000;
+  assert.equal(post({ action: 'results', token: old }).error, 'auth');
+  const { token } = login(post);
+  assert.equal(post({ action: 'vote', token, lista: 'UNESI', vote_id: 'e1', estacion: 'Mesa 1', ts: tsBefore }).error, 'eleccion');
+  const ok = post({ action: 'vote', token, lista: 'UNESI', vote_id: 'e2', estacion: 'Mesa 1', ts: clock.t });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.counts.UNESI, 1);
+});
+
+test('mesa y vote_id inválidos se rechazan', () => {
+  const { post } = load();
+  const { token } = login(post);
+  assert.equal(post({ action: 'vote', token, lista: 'UNESI', vote_id: 'x'.repeat(300), estacion: 'Mesa 1' }).error, 'vote_id');
+  const r = post({ action: 'vote', token, lista: 'UNESI', vote_id: 'm1', estacion: '=HYPERLINK("x")' });
+  assert.equal(r.ok, true);
 });

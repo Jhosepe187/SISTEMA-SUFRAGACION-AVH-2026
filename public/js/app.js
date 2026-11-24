@@ -1,5 +1,5 @@
 // Arranque: pantallas, sesión, mesa y sincronización de votos.
-import { API_URL, MOCK, RETRY_MS } from './config.js';
+import { API_URL, MOCK, RETRY_MS, KEY_PREFIX as P } from './config.js';
 import { createApi } from './api.js';
 import { VoteQueue } from './logic.js';
 import { mountBallot } from './ballot.js';
@@ -17,15 +17,15 @@ const $ = (s) => document.querySelector(s);
 const SCREENS = ['inicio', 'login', 'menu', 'cedula', 'resultados'];
 const PERSISTED = ['menu', 'cedula', 'resultados'];
 
-let token = store.get('avh_token');
-const queue = new VoteQueue(storage, (vote) => api.vote(token, vote));
+let token = store.get(P + 'token');
+const queue = new VoteQueue(storage, (vote) => api.vote(token, vote), P + 'queue');
 
 // ---------- pantallas ----------
 let results = null;
 function show(name) {
   if ((name === 'menu' || name === 'cedula' || name === 'resultados') && !token) name = 'login';
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
-  if (PERSISTED.includes(name)) store.set('avh_mode', name);
+  if (PERSISTED.includes(name)) store.set(P + 'mode', name);
   if (name === 'resultados') results.start(); else results?.stop();
   if (name === 'cedula') ballot.reset();
   if (name === 'login') {
@@ -34,7 +34,10 @@ function show(name) {
     f.querySelector('.form-error').textContent = '';
     setTimeout(() => f.user.focus(), 50);
   }
-  if (name === 'menu' && !store.get('avh_estacion')) openMesa();
+  if (name === 'menu') {
+    paintSync();
+    if (!store.get(P + 'estacion')) openMesa();
+  }
 }
 
 document.addEventListener('click', (e) => {
@@ -52,7 +55,7 @@ async function tryLogin(form) {
     const r = await api.login(form.user.value.trim(), form.pass.value);
     if (r.ok) {
       token = r.token;
-      store.set('avh_token', token);
+      store.set(P + 'token', token);
       return true;
     }
     err.textContent = r.error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : 'No se pudo iniciar sesión.';
@@ -73,21 +76,21 @@ $('#login-form').addEventListener('submit', async (e) => {
 
 $('#btn-logout').addEventListener('click', () => {
   token = null;
-  store.del('avh_token');
-  store.del('avh_mode');
+  store.del(P + 'token');
+  store.del(P + 'mode');
   show('inicio');
 });
 
 // ---------- mesa ----------
 function paintEstacion() {
-  const m = store.get('avh_estacion') || 'Mesa sin asignar';
+  const m = store.get(P + 'estacion') || 'Mesa sin asignar';
   document.querySelectorAll('[data-estacion]').forEach((el) => (el.textContent = m));
 }
 function openMesa() { $('#modal-mesa').hidden = false; }
 $('#btn-estacion').addEventListener('click', openMesa);
 document.querySelectorAll('[data-mesa]').forEach((b) =>
   b.addEventListener('click', () => {
-    store.set('avh_estacion', b.dataset.mesa);
+    store.set(P + 'estacion', b.dataset.mesa);
     $('#modal-mesa').hidden = true;
     paintEstacion();
   }),
@@ -124,29 +127,27 @@ document.addEventListener('keydown', (e) => {
 let online = true;
 function paintSync() {
   const n = queue.pending();
-  const el = $('#sync-status');
-  if (n > 0) {
-    el.textContent = `⟳ ${n} voto${n === 1 ? '' : 's'} por sincronizar`;
-    el.className = 'sync-status is-pending';
-  } else {
-    el.textContent = online ? '● Conectado' : '● Sin conexión';
-    el.className = 'sync-status' + (online ? '' : ' is-pending');
-  }
+  const isOnline = online && navigator.onLine !== false;
+  const text = n > 0 ? `⟳ ${n} voto${n === 1 ? '' : 's'} por sincronizar` : isOnline ? '● Conectado' : '● Sin conexión';
+  const cls = 'sync-status' + (n > 0 || !isOnline ? ' is-pending' : '');
+  document.querySelectorAll('[data-sync]').forEach((el) => { el.textContent = text; el.className = cls; });
 }
 async function syncNow() {
   if (!token) return paintSync();
   const r = await queue.flush();
-  online = r.failed === 0 || r.sent > 0;
+  if (r.sent > 0) online = true;
+  else if (r.failed > 0) online = false;
   if (r.authError) $('#auth-banner').hidden = false;
   paintSync();
 }
 setInterval(syncNow, RETRY_MS);
 window.addEventListener('online', syncNow);
+window.addEventListener('offline', paintSync);
 
 // ---------- montaje ----------
 const ballot = mountBallot($('#ballot-root'), {
   onVote(lista) {
-    queue.enqueue(lista, store.get('avh_estacion') || 'Mesa sin asignar');
+    queue.enqueue(lista, store.get(P + 'estacion') || 'Mesa sin asignar');
     paintSync();
     syncNow();
   },
@@ -157,7 +158,7 @@ results = mountResults($('#results-root'), {
   onBack: () => show('menu'),
   onAuthError: () => {
     token = null;
-    store.del('avh_token');
+    store.del(P + 'token');
     show('login');
   },
 });
@@ -165,5 +166,5 @@ results = mountResults($('#results-root'), {
 if (MOCK) $('#mock-tag').hidden = false;
 paintEstacion();
 paintSync();
-show(token ? store.get('avh_mode') || 'menu' : 'inicio');
+show(token ? store.get(P + 'mode') || 'menu' : 'inicio');
 syncNow();

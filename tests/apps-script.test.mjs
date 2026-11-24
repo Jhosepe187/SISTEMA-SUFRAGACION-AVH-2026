@@ -150,7 +150,7 @@ test('results devuelve counts', () => {
   post({ action: 'vote', token, lista: 'UNESI', vote_id: 'r2', estacion: 'Mesa 2' });
   const r = post({ action: 'results', token });
   assert.equal(r.ok, true);
-  assert.deepEqual(r.counts, { UNESI: 2, HUMBI: 0, AVH: 0 });
+  assert.deepEqual(r.counts, { UNESI: 2, HUMBI: 0, AVH: 0, BLANCO: 0 });
   assert.ok(r.updatedAt);
 });
 
@@ -166,8 +166,8 @@ test('conteo se deriva de Votos aunque Conteo esté desfasado', () => {
   const { token } = login(post);
   books[BD].sheets.Conteo.getRange(2, 1, 3, 2).setValues([['UNESI', 50], ['HUMBI', 50], ['AVH', 50]]);
   const r = post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'c1', estacion: 'Mesa 1' });
-  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 1, AVH: 0 });
-  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 0, HUMBI: 1, AVH: 0 });
+  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 1, AVH: 0, BLANCO: 0 });
+  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 0, HUMBI: 1, AVH: 0, BLANCO: 0 });
 });
 
 test('flush antes de liberar el lock', () => {
@@ -231,7 +231,7 @@ test('crea las hojas solas si nadie ejecutó setup', () => {
   assert.equal(r.counts.UNESI, 1);
   assert.equal(books[BD].sheets.Votos.rows.length, 2);
   assert.ok(books[REP].sheets.Resumen);
-  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 1, HUMBI: 0, AVH: 0 });
+  assert.deepEqual(post({ action: 'results', token }).counts, { UNESI: 1, HUMBI: 0, AVH: 0, BLANCO: 0 });
 });
 
 test('results sin hojas creadas devuelve ceros (no error)', () => {
@@ -239,7 +239,7 @@ test('results sin hojas creadas devuelve ceros (no error)', () => {
   const { token } = login(post);
   const r = post({ action: 'results', token });
   assert.equal(r.ok, true);
-  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 0 });
+  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 0, BLANCO: 0 });
 });
 
 test('results repetidos usan caché sin abrir la hoja', () => {
@@ -258,4 +258,16 @@ test('un voto abre cada libro una sola vez', () => {
   opens.n = 0;
   post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'o1', estacion: 'Mesa 1' });
   assert.ok(opens.n <= 2, 'openById llamado ' + opens.n + ' veces');
+});
+
+test('voto en blanco se registra, se cuenta y sale en el reporte', () => {
+  const { post, books } = load();
+  const { token } = login(post);
+  const r = post({ action: 'vote', token, lista: 'BLANCO', vote_id: 'bl1', estacion: 'Mesa 1' });
+  assert.equal(r.ok, true);
+  assert.equal(r.counts.BLANCO, 1);
+  assert.equal(books[BD].sheets.Votos.rows[1][2], 'BLANCO');
+  const resumen = books[REP].sheets.Resumen.rows;
+  assert.ok(resumen.some((row) => row[0] === 'Voto en blanco' && row[1] === 1));
+  assert.ok(resumen.some((row) => row[0] === 'Total' && row[1] === 1));
 });

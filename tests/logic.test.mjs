@@ -8,16 +8,17 @@ function fakeStorage() {
 }
 
 test('shares con total 0', () => {
-  const r = computeShares({ UNESI: 0, HUMBI: 0, AVH: 0 });
+  const r = computeShares({ UNESI: 0, HUMBI: 0, AVH: 0, BLANCO: 0 });
+  assert.equal(r.items.length, 4);
   assert.equal(r.total, 0);
   for (const it of r.items) assert.equal(it.pct, 0);
 });
 
 test('shares normal', () => {
-  const r = computeShares({ UNESI: 90, HUMBI: 60, AVH: 30 });
-  assert.equal(r.total, 180);
-  assert.deepEqual(r.items.map((i) => i.pct), [50, 33.3, 16.7]);
-  assert.deepEqual(r.items.map((i) => i.key), ['UNESI', 'HUMBI', 'AVH']);
+  const r = computeShares({ UNESI: 90, HUMBI: 60, AVH: 30, BLANCO: 20 });
+  assert.equal(r.total, 200);
+  assert.deepEqual(r.items.map((i) => i.pct), [45, 30, 15, 10]);
+  assert.deepEqual(r.items.map((i) => i.key), ['UNESI', 'HUMBI', 'AVH', 'BLANCO']);
 });
 
 test('enqueue persiste', () => {
@@ -77,7 +78,7 @@ test('mock login + vote + results', async () => {
   assert.equal((await api.vote(token, v)).ok, true);
   await api.vote(token, v); // reintento: no duplica
   const r = await api.results(token);
-  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 1 });
+  assert.deepEqual(r.counts, { UNESI: 0, HUMBI: 0, AVH: 1, BLANCO: 0 });
   assert.equal((await api.results('otro')).error, 'auth');
 });
 
@@ -107,4 +108,13 @@ test('vote envía ts al servidor', async () => {
   const api = createApi({ url: 'https://x', mock: false, fetchImpl: async (_u, o) => { body = JSON.parse(o.body); return { ok: true, json: async () => ({ ok: true }) }; } });
   await api.vote('t', { vote_id: 'a', lista: 'UNESI', estacion: 'Mesa 1', ts: 123 });
   assert.equal(body.ts, 123);
+});
+
+test('mock cuenta el voto en blanco', async () => {
+  globalThis.localStorage = fakeStorage();
+  const { createApi } = await import('../public/js/api.js');
+  const api = createApi({ url: '', mock: true, latency: 0 });
+  const { token } = await api.login('prueba', 'prueba');
+  assert.equal((await api.vote(token, { vote_id: 'b1', lista: 'BLANCO', estacion: 'Mesa 1' })).ok, true);
+  assert.equal((await api.results(token)).counts.BLANCO, 1);
 });

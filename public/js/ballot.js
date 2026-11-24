@@ -47,9 +47,9 @@ export function mountBallot(root, { onVote }) {
       <div class="ballot-options">
         ${LISTAS.map((l, i) => `
           <div class="option" style="--glow:${l.color}">
-            <div class="option-label">LISTA ${i + 1}</div>
-            <div class="option-name">${l.nombre}</div>
-            <button class="option-box" data-key="${l.key}" aria-label="Votar por ${l.nombre}">
+            <div class="option-label">${l.blank ? 'VOTO' : `LISTA ${i + 1}`}</div>
+            <div class="option-name">${l.blank ? 'En blanco' : l.nombre}</div>
+            <button class="option-box${l.blank ? ' is-blank' : ''}" data-key="${l.key}" aria-label="${l.blank ? 'Votar en blanco' : `Votar por ${l.nombre}`}">
               <img src="${l.logo}" alt="" draggable="false" />
               <svg class="xmark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <path class="x1" d="M14 14 L86 86" pathLength="1"/>

@@ -1,6 +1,6 @@
 // Lógica pura: porcentajes y cola local de votos (sin DOM).
 
-const KEYS = ['UNESI', 'HUMBI', 'AVH'];
+const KEYS = ['UNESI', 'HUMBI', 'AVH', 'BLANCO'];
 
 export function computeShares(counts) {
   const items = KEYS.map((key) => ({ key, votos: Number(counts?.[key]) || 0 }));

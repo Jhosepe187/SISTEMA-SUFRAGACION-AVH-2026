@@ -115,12 +115,12 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
   text-align: center; font-weight: 700; font-size: clamp(0.8rem, 1.4vw, 1rem); margin: 14px auto 22px;
   background: var(--azul-claro); border: 1.5px dashed var(--azul); padding: 8px 14px; border-radius: 8px; width: fit-content;
 }
-.ballot-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(14px, 2.5vw, 34px); }
+.ballot-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(14px, 2.5vw, 34px); }
 .option { display: grid; justify-items: center; gap: 4px; text-align: center; }
 .option-label { font-weight: 800; font-size: clamp(1rem, 1.8vw, 1.3rem); }
 .option-name { font-weight: 500; color: var(--muted); font-size: clamp(0.8rem, 1.3vw, 1rem); min-height: 1.5em; margin-bottom: 8px; }
 .option-box {
-  position: relative; width: 100%; max-width: 330px; aspect-ratio: 1; padding: 6%;
+  position: relative; width: 100%; max-width: 270px; aspect-ratio: 1; padding: 6%;
   background: #fff; border: 3px solid var(--linea); border-radius: 4px;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
@@ -145,6 +145,7 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 .is-locked .option-box:not(.is-chosen) { opacity: 0.55; filter: grayscale(0.4); transition: opacity 0.3s; }
 .option-box.is-chosen { transform: none; border-color: var(--linea); box-shadow: none; }
 .option-box.is-chosen img { animation: none; filter: none; transform: none; }
+.option-box.is-blank { background: #fbfcfe; padding: 14%; }
 .xmark { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .xmark path {
   fill: none; stroke: #1d2230; stroke-width: 4.2; stroke-linecap: round; opacity: 0.92;
@@ -195,7 +196,7 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 }
 
 /* ---------- resultados ---------- */
-.screen-resultados { padding: 24px 16px 40px; color: #fff; }
+.screen-resultados { padding: 20px 16px 12px; color: #fff; }
 .results-root { width: min(1180px, 100%); margin: 0 auto; display: grid; gap: 22px; }
 .res-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 20px; }
 .res-title { text-align: center; }
@@ -213,27 +214,27 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 .res-updated { color: #bfe9d2; font-size: 0.88rem; }
 .res-updated.is-stale { color: #ffd23f; }
 
-.res-cards { display: grid; gap: 16px; }
+.res-cards { display: grid; gap: 12px; }
 .res-card {
-  display: grid; grid-template-columns: 120px 1fr; gap: 22px; align-items: center;
-  background: #fff; color: var(--tinta); border-radius: 20px; padding: 16px 24px 16px 16px; box-shadow: var(--shadow);
+  display: grid; grid-template-columns: 92px 1fr; gap: 20px; align-items: center;
+  background: #fff; color: var(--tinta); border-radius: 20px; padding: 10px 24px 10px 12px; box-shadow: var(--shadow);
   border: 3px solid transparent; transition: border-color 0.3s;
 }
 .res-card.is-lead { border-color: var(--c); }
-.res-card img { width: 120px; height: 120px; object-fit: contain; }
-.res-card h2 { margin: 0 0 10px; font-size: 1.3rem; }
-.hbar { height: 26px; border-radius: 99px; background: #edf1f7; overflow: hidden; }
+.res-card img { width: 92px; height: 92px; object-fit: contain; }
+.res-card h2 { margin: 0 0 6px; font-size: 1.2rem; }
+.hbar { height: 22px; border-radius: 99px; background: #edf1f7; overflow: hidden; }
 .hbar span {
   display: block; height: 100%; width: 0; border-radius: inherit;
   background: linear-gradient(90deg, color-mix(in srgb, var(--c) 75%, #fff), var(--c));
   transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.res-nums { margin-top: 8px; color: var(--muted); }
+.res-nums { margin-top: 4px; color: var(--muted); }
 .res-nums strong { font-size: 1.7rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
 .res-nums em { font-style: normal; font-weight: 700; color: var(--tinta); margin-left: 10px; font-size: 1.1rem; }
 
 .res-global { background: #fff; border-radius: 22px; padding: 28px 24px 20px; box-shadow: var(--shadow); color: var(--tinta); }
-.vchart { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 4vw, 60px); align-items: end; }
+.vchart { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(16px, 4vw, 60px); align-items: end; }
 .vcol { display: grid; justify-items: center; gap: 8px; text-align: center; }
 .vval strong { display: block; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .vval em { font-style: normal; color: var(--muted); font-weight: 600; }
@@ -261,7 +262,7 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 }
 @media (max-height: 820px) and (min-width: 761px) {
   .screen-cedula { padding-top: 44px; padding-bottom: 46px; }
-  .option-box { max-width: 290px; }
+  .option-box { max-width: 236px; }
   .ballot-instr { margin: 10px auto 14px; }
 }
 @media (prefers-reduced-motion: reduce) {

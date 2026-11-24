@@ -11,7 +11,8 @@ var REPORTE_ID = '1LAR84myX-IEYsXUzv0SjwwNmk_1KWP9wceh-isf1iVM';
 var LISTAS = [
   { key: 'UNESI', nombre: 'UNESI' },
   { key: 'HUMBI', nombre: 'Humbi por siempre' },
-  { key: 'AVH', nombre: 'AVH Juntos por el cambio' }
+  { key: 'AVH', nombre: 'AVH Juntos por el cambio' },
+  { key: 'BLANCO', nombre: 'Voto en blanco' }
 ];
 
 var TOKEN_MS = 12 * 60 * 60 * 1000; // 12 horas

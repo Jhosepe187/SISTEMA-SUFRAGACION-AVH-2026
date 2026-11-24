@@ -8,6 +8,7 @@ export const LISTAS = [
   { key: 'UNESI', nombre: 'UNESI', logo: 'assets/unesi.webp', color: '#f5c518' },
   { key: 'HUMBI', nombre: 'Humbi por siempre', logo: 'assets/humbi.webp', color: '#3d7bff' },
   { key: 'AVH', nombre: 'AVH Juntos por el cambio', logo: 'assets/avh.webp', color: '#2ec4b6' },
+  { key: 'BLANCO', nombre: 'Voto en blanco', logo: 'assets/blanco.svg', color: '#8a97ab', blank: true },
 ];
 
 export const THANKS_MS = 8000; // pantalla "Gracias por votar"

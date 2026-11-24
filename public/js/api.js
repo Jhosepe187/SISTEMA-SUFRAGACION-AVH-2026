@@ -34,7 +34,7 @@ function realApi(url, timeoutMs, fetchImpl) {
 // ---- Modo prueba: guarda todo en localStorage (compartido entre pestañas) ----
 const MOCK_USER = 'prueba';
 const MOCK_PASS = 'prueba';
-const KEYS = ['UNESI', 'HUMBI', 'AVH'];
+const KEYS = ['UNESI', 'HUMBI', 'AVH', 'BLANCO'];
 
 function mockApi(latency) {
   const ls = globalThis.localStorage;
@@ -43,7 +43,7 @@ function mockApi(latency) {
     try { return JSON.parse(ls.getItem(k)) ?? d; } catch { return d; }
   };
   const write = (k, v) => ls.setItem(k, JSON.stringify(v));
-  const counts = () => ({ UNESI: 0, HUMBI: 0, AVH: 0, ...read('avh_mock_counts', {}) });
+  const counts = () => ({ UNESI: 0, HUMBI: 0, AVH: 0, BLANCO: 0, ...read('avh_mock_counts', {}) });
   const validToken = (t) => !!t && read('avh_mock_tokens', []).includes(t);
 
   return {

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elecciones Municipio Escolar 2026 · AVH</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="assets/unesi.webp" />
+  <link rel="preload" as="image" href="assets/humbi.webp" />
+  <link rel="preload" as="image" href="assets/avh.webp" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="mock-tag" class="mock-tag" hidden>MODO PRUEBA · votos simulados</div>
+
+  <!-- 1. INICIO -->
+  <section id="screen-inicio" class="screen screen-inicio">
+    <img class="cover" src="assets/inicio.webp" alt="Elecciones Municipio Escolar 2026 — I.E.P. Alexander von Humboldt" />
+    <button class="btn btn-primary btn-xl inicio-btn" data-go="login">Ingresar</button>
+  </section>
+
+  <!-- 2. LOGIN -->
+  <section id="screen-login" class="screen screen-login" hidden>
+    <form id="login-form" class="card login-card" autocomplete="off">
+      <h1>Acceso del comité electoral</h1>
+      <p class="muted">Ingresa con la cuenta administradora</p>
+      <label>Usuario<input name="user" required autocomplete="off" /></label>
+      <label>Contraseña<input name="pass" type="password" required autocomplete="off" /></label>
+      <p class="form-error" role="alert"></p>
+      <button class="btn btn-primary" type="submit">Iniciar sesión</button>
+      <button class="btn btn-link" type="button" data-go="inicio">← Volver</button>
+    </form>
+  </section>
+
+  <!-- 3. MENÚ -->
+  <section id="screen-menu" class="screen screen-menu" hidden>
+    <div class="menu-wrap">
+      <header class="menu-head">
+        <h1>Panel electoral</h1>
+        <p class="muted">Elecciones del Municipio Escolar 2026 · <span data-estacion></span></p>
+      </header>
+      <div class="menu-grid">
+        <button class="menu-tile" data-go="cedula">
+          <span class="tile-icon" aria-hidden="true">🗳️</span>
+          <span class="tile-title">Iniciar votación</span>
+          <span class="tile-sub">Abre la cédula para los votantes</span>
+        </button>
+        <button class="menu-tile" data-go="resultados">
+          <span class="tile-icon" aria-hidden="true">📊</span>
+          <span class="tile-title">Ver resultados</span>
+          <span class="tile-sub">Conteo en tiempo real</span>
+        </button>
+      </div>
+      <div class="menu-foot">
+        <button class="btn btn-link" id="btn-estacion">Cambiar mesa</button>
+        <button class="btn btn-ghost" id="btn-logout">Cerrar sesión</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. CÉDULA -->
+  <section id="screen-cedula" class="screen screen-cedula" hidden>
+    <button class="exit-btn" id="btn-exit" title="Salir de la votación (requiere contraseña)">Salir</button>
+    <div id="ballot-root" class="ballot-root"></div>
+    <div class="sync-bar">
+      <span data-estacion></span>
+      <span id="sync-status" class="sync-status">● Conectado</span>
+    </div>
+    <button id="auth-banner" class="auth-banner" hidden>Sesión vencida — un responsable debe reingresar (los votos siguen guardándose)</button>
+  </section>
+
+  <!-- 5. RESULTADOS -->
+  <section id="screen-resultados" class="screen screen-resultados" hidden>
+    <div id="results-root" class="results-root"></div>
+  </section>
+
+  <!-- Modal: login para salir / reingresar -->
+  <div id="modal-auth" class="modal" hidden>
+    <form id="modal-auth-form" class="card modal-card" autocomplete="off">
+      <h2 id="modal-auth-title">Salir de la votación</h2>
+      <p class="muted">Solo el comité electoral puede salir.</p>
+      <label>Usuario<input name="user" required autocomplete="off" /></label>
+      <label>Contraseña<input name="pass" type="password" required autocomplete="off" /></label>
+      <p class="form-error" role="alert"></p>
+      <div class="row">
+        <button class="btn btn-ghost" type="button" id="modal-auth-cancel">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Confirmar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: elegir mesa -->
+  <div id="modal-mesa" class="modal" hidden>
+    <div class="card modal-card">
+      <h2>¿Qué mesa es esta computadora?</h2>
+      <p class="muted">Queda registrado en cada voto.</p>
+      <div class="row">
+        <button class="btn btn-primary btn-xl" data-mesa="Mesa 1">Mesa 1</button>
+        <button class="btn btn-primary btn-xl" data-mesa="Mesa 2">Mesa 2</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -64,7 +64,7 @@ function isValidLista(key) {
 
 function login_(user, pass) {
   var props = PropertiesService.getScriptProperties();
-  var U = props.getProperty('ADMIN_USER');
+  var U = props.getProperty('ADMIN_USER') || 'adminAVH'; // el usuario no es secreto
   var P = props.getProperty('ADMIN_PASS');
   if (!U || !P || user !== U || pass !== P) return { ok: false, error: 'credenciales' };
   purgeTokens_(props);

@@ -2,7 +2,7 @@
 
 // URL de la aplicación web de Google Apps Script (ver apps-script/INSTALACION.md).
 // Mientras esté vacía, el sitio funciona en MODO PRUEBA (votos simulados en este navegador).
-export const API_URL = '';
+export const API_URL = 'https://script.google.com/macros/s/AKfycbylbcxIgOuFN8E0CCsYRCs2Zrxx4miRnDCsg7hQ_Ib-Wu_xY5VYuytPr5fKFGqBmr3h/exec';
 
 export const LISTAS = [
   { key: 'UNESI', nombre: 'UNESI', logo: 'assets/unesi.webp', color: '#f5c518' },

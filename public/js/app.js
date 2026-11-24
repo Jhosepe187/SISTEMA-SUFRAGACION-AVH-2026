@@ -58,7 +58,10 @@ async function tryLogin(form) {
       store.set(P + 'token', token);
       return true;
     }
-    err.textContent = r.error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : 'No se pudo iniciar sesión.';
+    err.textContent =
+      r.error === 'credenciales' ? 'Usuario o contraseña incorrectos.'
+      : r.error === 'sin_config' ? 'Falta configurar la contraseña (ADMIN_PASS) en Google Apps Script.'
+      : 'No se pudo iniciar sesión.';
   } catch {
     err.textContent = 'Sin conexión con el servidor. Revisa el internet e intenta de nuevo.';
   } finally {

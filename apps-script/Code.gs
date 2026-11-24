@@ -64,9 +64,11 @@ function isValidLista(key) {
 
 function login_(user, pass) {
   var props = PropertiesService.getScriptProperties();
-  var U = props.getProperty('ADMIN_USER') || 'adminAVH'; // el usuario no es secreto
-  var P = props.getProperty('ADMIN_PASS');
-  if (!U || !P || user !== U || pass !== P) return { ok: false, error: 'credenciales' };
+  var U = String(props.getProperty('ADMIN_USER') || 'adminAVH').trim(); // el usuario no es secreto
+  var P = String(props.getProperty('ADMIN_PASS') || '').trim();
+  if (!P) return { ok: false, error: 'sin_config' }; // falta la propiedad ADMIN_PASS
+  var okUser = String(user || '').trim().toLowerCase() === U.toLowerCase();
+  if (!okUser || String(pass || '').trim() !== P) return { ok: false, error: 'credenciales' };
   purgeTokens_(props);
   var token = Utilities.getUuid();
   var val = (Date.now() + TOKEN_MS) + '|' + Date.now(); // vencimiento|emitido

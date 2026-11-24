@@ -209,3 +209,15 @@ test('mesa y vote_id inválidos se rechazan', () => {
   const r = post({ action: 'vote', token, lista: 'UNESI', vote_id: 'm1', estacion: '=HYPERLINK("x")' });
   assert.equal(r.ok, true);
 });
+
+test('login sin ADMIN_PASS configurada → sin_config', () => {
+  const { post, ctx } = load();
+  ctx.PropertiesService.getScriptProperties().deleteProperty('ADMIN_PASS');
+  assert.equal(post({ action: 'login', user: 'adminAVH', pass: 'lo-que-sea' }).error, 'sin_config');
+});
+
+test('login tolera espacios y mayúsculas en el usuario', () => {
+  const { post, ctx } = load();
+  ctx.PropertiesService.getScriptProperties().setProperty('ADMIN_PASS', ' clave-prueba \n');
+  assert.equal(post({ action: 'login', user: ' AdminAVH ', pass: 'clave-prueba ' }).ok, true);
+});

@@ -39,20 +39,14 @@ Para reiniciar el modo prueba, abre la consola del navegador y ejecuta `localSto
 
 Sigue [apps-script/INSTALACION.md](apps-script/INSTALACION.md) (unos 10 minutos, una sola vez). Al terminar, pega la URL `/exec` en `public/js/config.js`.
 
-## Publicar en Vercel (gratis)
+## Publicar en Vercel
 
-1. Crea una cuenta en https://vercel.com (puedes entrar con GitHub).
-2. **Opción A, sin GitHub:** despliega desde esta carpeta:
+El proyecto de Vercel **sufragacion-avh-2026** está conectado a este repositorio:
+**cada push a `main` se publica solo** en https://sufragacion-avh-2026.vercel.app (tarda ~30 s).
 
-   ```bash
-   npx vercel --prod
-   ```
-
-   Cuando pregunte, elige framework **Other**. `vercel.json` ya indica que se publica la carpeta `public`.
-
-3. **Opción B, con GitHub:** sube esta carpeta a un repositorio → en Vercel, *Add New → Project* → importa el repositorio → *Framework: Other* → Deploy.
-
-Cada vez que cambies `config.js` u otro archivo, vuelve a desplegar.
+- En cada despliegue, `scripts/stamp.mjs` agrega una versión única (`?v=...`) a scripts, estilos y logos,
+  para que los navegadores siempre carguen lo último.
+- Publicar a mano (opcional): `npx vercel --prod`.
 
 ## El día de la votación
 

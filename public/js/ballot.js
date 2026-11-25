@@ -43,12 +43,11 @@ export function mountBallot(root, { onVote }) {
           <h1>I.E.P. ALEXANDER VON HUMBOLDT</h1>
         </div>
       </header>
-      <p class="ballot-instr">MARCA CON UNA X EL SÍMBOLO DE LA LISTA DE TU PREFERENCIA</p>
+      <p class="ballot-instr">SELECCIONA CON EL MOUSE LA LISTA DE TU PREFERENCIA</p>
       <div class="ballot-options">
-        ${LISTAS.map((l, i) => `
+        ${LISTAS.map((l) => `
           <div class="option" style="--glow:${l.color}">
-            <div class="option-label">${l.blank ? 'VOTO' : `LISTA ${i + 1}`}</div>
-            <div class="option-name">${l.blank ? 'En blanco' : l.nombre}</div>
+            <div class="option-name">${l.nombre}</div>
             <button class="option-box${l.blank ? ' is-blank' : ''}" data-key="${l.key}" aria-label="${l.blank ? 'Votar en blanco' : `Votar por ${l.nombre}`}">
               <img src="${l.logo}" alt="" draggable="false" />
               <svg class="xmark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">

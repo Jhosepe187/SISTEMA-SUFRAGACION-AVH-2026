@@ -19,6 +19,7 @@ var TOKEN_MS = 12 * 60 * 60 * 1000; // 12 horas
 var CACHE_S = 21600; // máximo permitido por CacheService (6 h)
 var COUNTS_CACHE_S = 120; // conteo en caché para responder resultados sin abrir la hoja
 var MESAS = ['Mesa 1', 'Mesa 2', 'Mesa sin asignar'];
+var MESAS_REPORTE = ['Mesa 1', 'Mesa 2'];
 var VOTE_ID_RE = /^[A-Za-z0-9-]{1,64}$/;
 
 // ---------- Acceso a libros/hojas (una sola apertura por petición) ----------
@@ -76,7 +77,8 @@ function handle_(req) {
       return vote_(req);
     case 'results':
       if (!validToken_(req.token)) return { ok: false, error: 'auth' };
-      return { ok: true, counts: cachedCounts_(), updatedAt: new Date().toISOString() };
+      var t = cachedTally_();
+      return { ok: true, counts: t.counts, mesas: t.mesas, updatedAt: new Date().toISOString() };
     default:
       return { ok: false, error: 'accion' };
   }
@@ -151,27 +153,28 @@ function vote_(req) {
     var votos = sheet_(BD_ID, 'Votos');
     if (cache.get(vidKey) !== null || seenInSheet_(votos, req.vote_id)) {
       cache.put(vidKey, '1', CACHE_S);
-      return { ok: true, duplicate: true, counts: cachedCounts_() };
+      var td = cachedTally_();
+      return { ok: true, duplicate: true, counts: td.counts, mesas: td.mesas };
     }
 
     // La hoja Votos es la única fuente de verdad: una sola escritura por voto.
     votos.appendRow([new Date(), estacion, req.lista, String(req.vote_id)]);
     SpreadsheetApp.flush(); // asegurar la fila antes de soltar el lock
     cache.put(vidKey, '1', CACHE_S);
-    var counts = readCounts_(votos);
-    putCounts_(counts);
-    refreshViews_(counts);
+    var tally = readTally_(votos);
+    putTally_(tally);
+    refreshViews_(tally);
     SpreadsheetApp.flush();
-    return { ok: true, duplicate: false, counts: counts };
+    return { ok: true, duplicate: false, counts: tally.counts, mesas: tally.mesas };
   } finally {
     lock.releaseLock();
   }
 }
 
 /** Actualiza Conteo y REPORTE (solo vistas). Si fallan, el voto ya está guardado. */
-function refreshViews_(counts) {
-  try { writeCounts_(counts); } catch (err) { console.error('Conteo', err); }
-  try { writeReport(counts); } catch (err) { console.error('Reporte', err); }
+function refreshViews_(tally) {
+  try { writeCounts_(tally.counts); } catch (err) { console.error('Conteo', err); }
+  try { writeReport(tally); } catch (err) { console.error('Reporte', err); }
 }
 
 function seenInSheet_(sh, voteId) {
@@ -188,31 +191,44 @@ function zeroCounts_() {
   return out;
 }
 
-/** Cuenta los votos directamente desde la hoja Votos (columna C). */
-function readCounts_(votos) {
+function emptyTally_() {
+  var mesas = {};
+  for (var i = 0; i < MESAS_REPORTE.length; i++) mesas[MESAS_REPORTE[i]] = zeroCounts_();
+  return { counts: zeroCounts_(), mesas: mesas };
+}
+
+/** Cuenta los votos desde la hoja Votos: total por lista y por mesa (columnas B y C). */
+function readTally_(votos) {
   var sh = votos || book_(BD_ID).getSheetByName('Votos');
-  var out = zeroCounts_();
-  if (!sh) return out;
+  var t = emptyTally_();
+  if (!sh) return t;
   var last = sh.getLastRow();
-  if (last < 2) return out;
-  var vals = sh.getRange(2, 3, last - 1, 1).getValues();
-  for (var j = 0; j < vals.length; j++) if (isValidLista(vals[j][0])) out[vals[j][0]] += 1;
-  return out;
+  if (last < 2) return t;
+  var vals = sh.getRange(2, 2, last - 1, 2).getValues(); // [Mesa, Lista]
+  for (var j = 0; j < vals.length; j++) {
+    var mesa = String(vals[j][0]);
+    var lista = vals[j][1];
+    if (!isValidLista(lista)) continue;
+    t.counts[lista] += 1;
+    if (!t.mesas[mesa]) t.mesas[mesa] = zeroCounts_();
+    t.mesas[mesa][lista] += 1;
+  }
+  return t;
 }
 
 /** Conteo para la pantalla de resultados: caché primero, hoja solo si hace falta. */
-function cachedCounts_() {
-  var raw = CacheService.getScriptCache().get('counts');
+function cachedTally_() {
+  var raw = CacheService.getScriptCache().get('tally');
   if (raw) {
     try { return JSON.parse(raw); } catch (err) { /* recalcular */ }
   }
-  var counts = readCounts_();
-  putCounts_(counts);
-  return counts;
+  var t = readTally_();
+  putTally_(t);
+  return t;
 }
 
-function putCounts_(counts) {
-  CacheService.getScriptCache().put('counts', JSON.stringify(counts), COUNTS_CACHE_S);
+function putTally_(t) {
+  CacheService.getScriptCache().put('tally', JSON.stringify(t), COUNTS_CACHE_S);
 }
 
 function writeCounts_(counts) {
@@ -223,19 +239,32 @@ function writeCounts_(counts) {
 
 // ---------- Reporte ----------
 
-function writeReport(counts) {
+function writeReport(tally) {
+  var counts = tally.counts;
+  var mesas = tally.mesas || {};
   var sh = sheet_(REPORTE_ID, 'Resumen');
   var total = 0;
   for (var i = 0; i < LISTAS.length; i++) total += counts[LISTAS[i].key];
-  var rows = [['Lista', 'Votos', '%']];
+  var header = ['Lista', 'Votos', '%'].concat(MESAS_REPORTE);
+  var rows = [header];
+  var mesaTotals = MESAS_REPORTE.map(function () { return 0; });
   for (var j = 0; j < LISTAS.length; j++) {
-    var v = counts[LISTAS[j].key];
-    rows.push([LISTAS[j].nombre, v, total ? v / total : 0]);
+    var key = LISTAS[j].key;
+    var v = counts[key];
+    var row = [LISTAS[j].nombre, v, total ? v / total : 0];
+    for (var m = 0; m < MESAS_REPORTE.length; m++) {
+      var mv = (mesas[MESAS_REPORTE[m]] || {})[key] || 0;
+      row.push(mv);
+      mesaTotals[m] += mv;
+    }
+    rows.push(row);
   }
-  rows.push(['Total', total, total ? 1 : 0]);
-  rows.push(['Última actualización', new Date(), '']);
-  sh.getRange(1, 1, rows.length, 3).setValues(rows);
-  sh.getRange(1, 1, 1, 3).setFontWeight('bold');
+  rows.push(['Total', total, total ? 1 : 0].concat(mesaTotals));
+  var stamp = ['Última actualización', new Date(), ''];
+  while (stamp.length < header.length) stamp.push('');
+  rows.push(stamp);
+  sh.getRange(1, 1, rows.length, header.length).setValues(rows);
+  sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
   sh.getRange(2, 3, LISTAS.length + 1, 1).setNumberFormat('0.0%');
 }
 
@@ -245,10 +274,10 @@ function writeReport(counts) {
 function setup() {
   sheet_(BD_ID, 'Votos');
   sheet_(BD_ID, 'Conteo');
-  var counts = readCounts_();
-  putCounts_(counts);
-  writeCounts_(counts);
-  writeReport(counts);
+  var tally = readTally_();
+  putTally_(tally);
+  writeCounts_(tally.counts);
+  writeReport(tally);
 }
 
 /**
@@ -263,9 +292,9 @@ function reiniciarEleccion() {
     var last = votos.getLastRow();
     if (last > 1) votos.deleteRows(2, last - 1);
     PropertiesService.getScriptProperties().setProperty('ELECCION_DESDE', String(Date.now()));
-    var counts = zeroCounts_();
-    putCounts_(counts);
-    refreshViews_(counts);
+    var tally = emptyTally_();
+    putTally_(tally);
+    refreshViews_(tally);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
@@ -274,9 +303,9 @@ function reiniciarEleccion() {
 
 /** Reconstruye Conteo y REPORTE a partir de la hoja Votos (por si alguien los editó a mano). */
 function recontar() {
-  var counts = readCounts_();
-  putCounts_(counts);
-  refreshViews_(counts);
+  var tally = readTally_();
+  putTally_(tally);
+  refreshViews_(tally);
 }
 
 function json_(obj) {

@@ -1,6 +1,9 @@
-// Pantalla de resultados: barras por lista, gráfico global y total, con refresco periódico.
+// Pantalla de resultados: barras por lista, conteo por mesa y gráfico global con regla,
+// con refresco periódico.
 import { LISTAS, POLL_MS, KEY_PREFIX } from './config.js';
-import { computeShares } from './logic.js';
+import { computeShares, axisMax } from './logic.js';
+
+const MESAS = ['Mesa 1', 'Mesa 2'];
 
 export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
   root.innerHTML = `
@@ -15,6 +18,7 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
     <div class="res-toolbar">
       <div class="seg" role="tablist">
         <button class="seg-btn is-active" data-view="lista" role="tab">Por lista</button>
+        <button class="seg-btn" data-view="mesa" role="tab">Por mesa</button>
         <button class="seg-btn" data-view="global" role="tab">Gráfico global</button>
       </div>
       <span class="res-updated" data-updated>Cargando…</span>
@@ -32,10 +36,31 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
         </article>`).join('')}
     </div>
 
+    <div class="res-mesas" data-panel="mesa" hidden>
+      ${MESAS.map((m) => `
+        <section class="mesa-card" data-mesa-card="${m}">
+          <header class="mesa-head">
+            <h2>${m}</h2>
+            <div class="mesa-total"><strong data-mesa-total>0</strong><span>votos</span></div>
+          </header>
+          <ul class="mesa-rows">
+            ${LISTAS.map((l) => `
+              <li class="mesa-row" data-key="${l.key}" style="--c:${l.color}">
+                <img src="${l.logo}" alt="" />
+                <span class="mesa-name">${l.nombre}</span>
+                <span class="mesa-bar"><span></span></span>
+                <strong class="mesa-num" data-mesa-votos>0</strong>
+              </li>`).join('')}
+          </ul>
+        </section>`).join('')}
+    </div>
+
     <div class="res-global" data-panel="global" hidden>
-      <div class="vchart">
-        ${LISTAS.map((l) => `
-          <div class="vcol" data-key="${l.key}" style="--c:${l.color}">
+      <div class="vchart" style="--cols:${LISTAS.length}">
+        <div class="vaxis-title">Estudiantes</div>
+        <div class="vaxis" aria-hidden="true"></div>
+        ${LISTAS.map((l, i) => `
+          <div class="vcol" data-key="${l.key}" style="--c:${l.color}; --col:${i + 2}">
             <div class="vval"><strong data-votos>0</strong><em data-pct>0 %</em></div>
             <div class="vtrack"><div class="vbar"></div></div>
             <img src="${l.logo}" alt="" />
@@ -48,6 +73,7 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
   let timer = null;
   let lastOk = 0;
   let tick = null;
+  let axisTop = 0;
 
   root.querySelector('[data-act="back"]').addEventListener('click', onBack);
   root.querySelectorAll('.seg-btn').forEach((b) =>
@@ -57,10 +83,21 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
     }),
   );
 
-  function render(counts) {
+  function renderAxis(top) {
+    if (top === axisTop) return;
+    axisTop = top;
+    const ticks = [];
+    for (let v = 0; v <= top; v += 50) ticks.push(`<span class="vtick" style="bottom:${(v / top) * 100}%">${v}</span>`);
+    $('.vaxis').innerHTML = ticks.join('');
+    $('.vchart').style.setProperty('--steps', top / 50);
+  }
+
+  function render(data) {
+    const counts = data.counts || data; // compatible con el formato anterior guardado en el navegador
     const { total, items } = computeShares(counts);
     $('[data-total]').textContent = total.toLocaleString('es-PE');
-    const max = Math.max(1, ...items.map((i) => i.votos));
+    const top = axisMax(Math.max(...items.map((i) => i.votos)));
+    renderAxis(top);
     for (const it of items) {
       const card = root.querySelector(`.res-card[data-key="${it.key}"]`);
       card.querySelector('[data-votos]').textContent = it.votos;
@@ -70,13 +107,30 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
       const col = root.querySelector(`.vcol[data-key="${it.key}"]`);
       col.querySelector('[data-votos]').textContent = it.votos;
       col.querySelector('[data-pct]').textContent = `${it.pct} %`;
-      col.querySelector('.vbar').style.height = `${(it.votos / max) * 100}%`;
+      col.querySelector('.vbar').style.height = `${(it.votos / top) * 100}%`;
     }
     const lead = items.reduce((a, b) => (b.votos > a.votos ? b : a));
-    root.querySelectorAll('[data-key]').forEach((el) => el.classList.toggle('is-lead', total > 0 && el.dataset.key === lead.key && items.filter((i) => i.votos === lead.votos).length === 1));
+    const unique = items.filter((i) => i.votos === lead.votos).length === 1;
+    root.querySelectorAll('.res-card[data-key], .vcol[data-key]').forEach((el) =>
+      el.classList.toggle('is-lead', total > 0 && unique && el.dataset.key === lead.key),
+    );
+    renderMesas(data.mesas || {});
   }
 
-  const SNAP_KEY = KEY_PREFIX + 'last_counts';
+  function renderMesas(mesas) {
+    for (const m of MESAS) {
+      const card = root.querySelector(`[data-mesa-card="${m}"]`);
+      const { total, items } = computeShares(mesas[m] || {});
+      card.querySelector('[data-mesa-total]').textContent = total.toLocaleString('es-PE');
+      for (const it of items) {
+        const row = card.querySelector(`.mesa-row[data-key="${it.key}"]`);
+        row.querySelector('[data-mesa-votos]').textContent = it.votos;
+        row.querySelector('.mesa-bar span').style.width = `${it.pct}%`;
+      }
+    }
+  }
+
+  const SNAP_KEY = KEY_PREFIX + 'last_results';
   const STALE_S = Math.max(15, (POLL_MS / 1000) * 4);
   let lastError = '';
   let running = false;
@@ -106,8 +160,9 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
       if (r.ok) {
         lastOk = Date.now();
         lastError = '';
-        render(r.counts);
-        try { localStorage.setItem(SNAP_KEY, JSON.stringify(r.counts)); } catch { /* sin almacenamiento */ }
+        const data = { counts: r.counts, mesas: r.mesas || {} };
+        render(data);
+        try { localStorage.setItem(SNAP_KEY, JSON.stringify(data)); } catch { /* sin almacenamiento */ }
       } else if (r.error === 'auth') {
         stop();
         onAuthError?.();
@@ -134,7 +189,7 @@ export function mountResults(root, { fetchCounts, onBack, onAuthError }) {
     // mostrar al instante el último conteo conocido mientras llega el nuevo
     try {
       const snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
-      if (snap) render(snap);
+      render(snap || { counts: {}, mesas: {} });
     } catch { /* */ }
     document.addEventListener('visibilitychange', onVisibility);
     poll();

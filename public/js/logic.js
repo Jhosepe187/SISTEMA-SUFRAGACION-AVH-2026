@@ -9,6 +9,12 @@ export function computeShares(counts) {
   return { total, items };
 }
 
+/** Tope de la regla del gráfico: 250 estudiantes, o más si se supera (en pasos de 50). */
+export const AXIS_MIN = 250;
+export function axisMax(maxVotos) {
+  return Math.max(AXIS_MIN, Math.ceil((Number(maxVotos) || 0) / 50) * 50);
+}
+
 function uuid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
   return 'v-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);

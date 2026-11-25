@@ -22,8 +22,15 @@ const queue = new VoteQueue(storage, (vote) => api.vote(token, vote), P + 'queue
 
 // ---------- pantallas ----------
 let results = null;
+let afterMesa = null; // pantalla a abrir cuando se elija la mesa
 function show(name) {
   if ((name === 'menu' || name === 'cedula' || name === 'resultados') && !token) name = 'login';
+  // sin mesa asignada no se puede votar: primero se elige la mesa
+  if (name === 'cedula' && !store.get(P + 'estacion')) {
+    afterMesa = 'cedula';
+    openMesa();
+    name = 'menu';
+  }
   for (const s of SCREENS) $(`#screen-${s}`).hidden = s !== name;
   if (PERSISTED.includes(name)) store.set(P + 'mode', name);
   if (name === 'resultados') results.start(); else results?.stop();
@@ -86,7 +93,7 @@ $('#btn-logout').addEventListener('click', () => {
 
 // ---------- mesa ----------
 function paintEstacion() {
-  const m = store.get(P + 'estacion') || 'Mesa sin asignar';
+  const m = store.get(P + 'estacion') || 'Sin mesa asignada';
   document.querySelectorAll('[data-estacion]').forEach((el) => (el.textContent = m));
 }
 function openMesa() { $('#modal-mesa').hidden = false; }
@@ -94,6 +101,14 @@ $('#btn-estacion').addEventListener('click', openMesa);
 document.querySelectorAll('[data-mesa]').forEach((b) =>
   b.addEventListener('click', () => {
     store.set(P + 'estacion', b.dataset.mesa);
+    if (afterMesa) {
+      const next = afterMesa;
+      afterMesa = null;
+      $('#modal-mesa').hidden = true;
+      paintEstacion();
+      show(next);
+      return;
+    }
     $('#modal-mesa').hidden = true;
     paintEstacion();
   }),

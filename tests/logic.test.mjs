@@ -118,3 +118,21 @@ test('mock cuenta el voto en blanco', async () => {
   assert.equal((await api.vote(token, { vote_id: 'b1', lista: 'BLANCO', estacion: 'Mesa 1' })).ok, true);
   assert.equal((await api.results(token)).counts.BLANCO, 1);
 });
+
+test('mock devuelve conteo por mesa', async () => {
+  globalThis.localStorage = fakeStorage();
+  const { createApi } = await import('../public/js/api.js');
+  const api = createApi({ url: '', mock: true, latency: 0 });
+  const { token } = await api.login('prueba', 'prueba');
+  await api.vote(token, { vote_id: 'mm1', lista: 'UNESI', estacion: 'Mesa 2' });
+  const r = await api.results(token);
+  assert.equal(r.mesas['Mesa 2'].UNESI, 1);
+  assert.equal(r.mesas['Mesa 1'].UNESI, 0);
+});
+
+test('axisMax usa 250 como tope mínimo', async () => {
+  const { axisMax } = await import('../public/js/logic.js');
+  assert.equal(axisMax(0), 250);
+  assert.equal(axisMax(120), 250);
+  assert.equal(axisMax(251), 300);
+});

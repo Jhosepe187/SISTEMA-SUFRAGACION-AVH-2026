@@ -117,8 +117,10 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 }
 .ballot-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(14px, 2.5vw, 34px); }
 .option { display: grid; justify-items: center; gap: 4px; text-align: center; }
-.option-label { font-weight: 800; font-size: clamp(1rem, 1.8vw, 1.3rem); }
-.option-name { font-weight: 500; color: var(--muted); font-size: clamp(0.8rem, 1.3vw, 1rem); min-height: 1.5em; margin-bottom: 8px; }
+.option-name {
+  font-weight: 800; color: var(--tinta); font-size: clamp(1rem, 1.75vw, 1.45rem); line-height: 1.15;
+  min-height: 2.3em; display: grid; place-items: end center; margin-bottom: 10px; text-wrap: balance;
+}
 .option-box {
   position: relative; width: 100%; max-width: 270px; aspect-ratio: 1; padding: 6%;
   background: #fff; border: 3px solid var(--linea); border-radius: 4px;
@@ -234,22 +236,54 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
 .res-nums em { font-style: normal; font-weight: 700; color: var(--tinta); margin-left: 10px; font-size: 1.1rem; }
 
 .res-global { background: #fff; border-radius: 22px; padding: 28px 24px 20px; box-shadow: var(--shadow); color: var(--tinta); }
-.vchart { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(16px, 4vw, 60px); align-items: end; }
-.vcol { display: grid; justify-items: center; gap: 8px; text-align: center; }
+/* gráfico global: regla a la izquierda + una columna por opción */
+.vchart {
+  --steps: 5;
+  display: grid; grid-template-columns: 52px repeat(var(--cols, 4), 1fr);
+  grid-template-rows: auto auto clamp(150px, 34vh, 360px) auto auto;
+  column-gap: clamp(12px, 3vw, 44px); row-gap: 8px; align-items: end;
+}
+.vcol { display: contents; }
+.vcol > * { grid-column: var(--col); justify-self: center; text-align: center; }
+.vaxis-title { grid-column: 1; grid-row: 1 / span 2; align-self: end; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.vaxis { grid-column: 1; grid-row: 3; position: relative; height: 100%; width: 100%; border-right: 2px solid var(--linea); }
+.vtick {
+  position: absolute; right: 0; transform: translateY(50%); padding-right: 10px;
+  font-size: 0.78rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.vtick::after { content: ''; position: absolute; right: -2px; top: 50%; width: 8px; height: 2px; background: var(--linea); }
+.vval { grid-row: 2; }
 .vval strong { display: block; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .vval em { font-style: normal; color: var(--muted); font-weight: 600; }
 .vtrack {
-  width: min(140px, 100%); height: clamp(150px, 36vh, 380px); display: flex; align-items: flex-end;
-  background: repeating-linear-gradient(0deg, #eef2f8 0 1px, transparent 1px 20%); border-bottom: 3px solid var(--linea);
+  grid-row: 3; justify-self: stretch !important; height: 100%; display: flex; align-items: flex-end; justify-content: center;
+  background: linear-gradient(to top, #e6ebf3 1px, transparent 1px) bottom / 100% calc(100% / var(--steps));
+  border-bottom: 3px solid var(--linea);
 }
 .vbar {
-  width: 100%; height: 0; border-radius: 12px 12px 0 0;
+  width: min(140px, 80%); height: 0; border-radius: 12px 12px 0 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--c) 70%, #fff), var(--c));
   transition: height 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .vcol.is-lead .vbar { box-shadow: 0 0 24px color-mix(in srgb, var(--c) 60%, transparent); }
-.vcol img { width: 84px; height: 84px; object-fit: contain; }
-.vname { font-weight: 600; font-size: 0.95rem; }
+.vcol img { grid-row: 4; width: 78px; height: 78px; object-fit: contain; }
+.vname { grid-row: 5; font-weight: 700; font-size: 0.95rem; }
+
+/* conteo por mesa */
+.res-mesas { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.mesa-card { background: #fff; color: var(--tinta); border-radius: 20px; padding: 18px 22px; box-shadow: var(--shadow); }
+.mesa-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf1f7; padding-bottom: 10px; margin-bottom: 8px; }
+.mesa-head h2 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+.mesa-total { text-align: right; line-height: 1; }
+.mesa-total strong { display: block; font-size: 2.2rem; color: var(--azul); font-variant-numeric: tabular-nums; }
+.mesa-total span { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.mesa-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mesa-row { display: grid; grid-template-columns: 44px minmax(0, 1.4fr) 1fr 44px; align-items: center; gap: 12px; padding: 6px 0; }
+.mesa-row img { width: 44px; height: 44px; object-fit: contain; }
+.mesa-name { font-weight: 700; font-size: 0.95rem; }
+.mesa-bar { height: 14px; border-radius: 99px; background: #edf1f7; overflow: hidden; }
+.mesa-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--c); transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+.mesa-num { text-align: right; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 760px) {
@@ -258,7 +292,10 @@ input:focus { outline: none; border-color: var(--azul); background: #fff; box-sh
   .res-head { grid-template-columns: 1fr; text-align: center; }
   .res-card { grid-template-columns: 72px 1fr; }
   .res-card img { width: 72px; height: 72px; }
-  .vcol img { width: 54px; height: 54px; }
+  .vcol img { width: 48px; height: 48px; }
+  .vchart { grid-template-columns: 40px repeat(var(--cols, 4), 1fr); column-gap: 8px; }
+  .vval strong { font-size: 1.3rem; }
+  .vname { font-size: 0.75rem; }
 }
 @media (max-height: 820px) and (min-width: 761px) {
   .screen-cedula { padding-top: 44px; padding-bottom: 46px; }

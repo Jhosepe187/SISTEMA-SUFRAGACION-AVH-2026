@@ -43,7 +43,12 @@ function mockApi(latency) {
     try { return JSON.parse(ls.getItem(k)) ?? d; } catch { return d; }
   };
   const write = (k, v) => ls.setItem(k, JSON.stringify(v));
-  const counts = () => ({ UNESI: 0, HUMBI: 0, AVH: 0, BLANCO: 0, ...read('avh_mock_counts', {}) });
+  const zero = () => ({ UNESI: 0, HUMBI: 0, AVH: 0, BLANCO: 0 });
+  const counts = () => ({ ...zero(), ...read('avh_mock_counts', {}) });
+  const mesas = () => {
+    const m = read('avh_mock_mesas', {});
+    return { 'Mesa 1': { ...zero(), ...m['Mesa 1'] }, 'Mesa 2': { ...zero(), ...m['Mesa 2'] } };
+  };
   const validToken = (t) => !!t && read('avh_mock_tokens', []).includes(t);
 
   return {
@@ -63,13 +68,15 @@ function mockApi(latency) {
       const c = counts();
       c[v.lista] += 1;
       write('avh_mock_counts', c);
+      const m = mesas();
+      if (m[v.estacion]) { m[v.estacion][v.lista] += 1; write('avh_mock_mesas', m); }
       write('avh_mock_ids', [...ids, v.vote_id]);
       return { ok: true, duplicate: false, counts: c };
     },
     async results(token) {
       await wait();
       if (!validToken(token)) return { ok: false, error: 'auth' };
-      return { ok: true, counts: counts(), updatedAt: new Date().toISOString() };
+      return { ok: true, counts: counts(), mesas: mesas(), updatedAt: new Date().toISOString() };
     },
   };
 }

@@ -271,3 +271,32 @@ test('voto en blanco se registra, se cuenta y sale en el reporte', () => {
   assert.ok(resumen.some((row) => row[0] === 'Voto en blanco' && row[1] === 1));
   assert.ok(resumen.some((row) => row[0] === 'Total' && row[1] === 1));
 });
+
+test('results incluye el conteo por mesa', () => {
+  const { post } = load();
+  const { token } = login(post);
+  post({ action: 'vote', token, lista: 'UNESI', vote_id: 'pm1', estacion: 'Mesa 1' });
+  post({ action: 'vote', token, lista: 'UNESI', vote_id: 'pm2', estacion: 'Mesa 2' });
+  post({ action: 'vote', token, lista: 'AVH', vote_id: 'pm3', estacion: 'Mesa 2' });
+  const r = post({ action: 'results', token });
+  assert.deepEqual(r.mesas['Mesa 1'], { UNESI: 1, HUMBI: 0, AVH: 0, BLANCO: 0 });
+  assert.deepEqual(r.mesas['Mesa 2'], { UNESI: 1, HUMBI: 0, AVH: 1, BLANCO: 0 });
+  assert.equal(r.counts.UNESI, 2);
+});
+
+test('reporte incluye columnas por mesa', () => {
+  const { post, books } = load();
+  const { token } = login(post);
+  post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'rm1', estacion: 'Mesa 1' });
+  post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'rm2', estacion: 'Mesa 2' });
+  post({ action: 'vote', token, lista: 'HUMBI', vote_id: 'rm3', estacion: 'Mesa 2' });
+  const rows = books[REP].sheets.Resumen.rows;
+  assert.deepEqual(rows[0].slice(0, 5), ['Lista', 'Votos', '%', 'Mesa 1', 'Mesa 2']);
+  const humbi = rows.find((row) => row[0] === 'Humbi por siempre');
+  assert.equal(humbi[1], 3);
+  assert.equal(humbi[3], 1);
+  assert.equal(humbi[4], 2);
+  const total = rows.find((row) => row[0] === 'Total');
+  assert.equal(total[3], 1);
+  assert.equal(total[4], 2);
+});
